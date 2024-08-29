@@ -38,11 +38,15 @@ import java.util.concurrent.locks.Lock;
 
 import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_UNABLE_DESTROY_MODEL;
 
+/**
+ * 模型对象的公共抽象父类型
+ */
 public abstract class ScopeModel implements ExtensionAccessor {
     protected static final ErrorTypeAwareLogger LOGGER = LoggerFactory.getErrorTypeAwareLogger(ScopeModel.class);
 
     /**
      * The internal id is used to represent the hierarchy of the model tree, such as:
+     * 内部 ID 用于表示模型树的层次结构
      * <ol>
      *     <li>1</li>
      *     FrameworkModel (index=1)
@@ -53,6 +57,9 @@ public abstract class ScopeModel implements ExtensionAccessor {
      *     <li>1.2.1</li>
      *     FrameworkModel (index=1) -> ApplicationModel (index=2) -> ModuleModel (index=1, first user module)
      * </ol>
+     * FrameworkModel    1
+     * ApplicationModel  1.1
+     * ModuleModel       1.1.1
      */
     private String internalId;
 
@@ -70,6 +77,9 @@ public abstract class ScopeModel implements ExtensionAccessor {
 
     private volatile ExtensionDirector extensionDirector;
 
+    /**
+     * 一个内部共享的Bean工厂
+     */
     private volatile ScopeBeanFactory beanFactory;
     private final List<ScopeModelDestroyListener> destroyListeners = new CopyOnWriteArrayList<>();
 
@@ -79,6 +89,9 @@ public abstract class ScopeModel implements ExtensionAccessor {
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
     private final boolean internalScope;
 
+    /**
+     * 创建锁，同一时间，只能创建FrameworkModel,ApplicationModel,ModuleModel中的一个
+     */
     protected final Object instLock = new Object();
 
     protected ScopeModel(ScopeModel parent, ExtensionScope scope, boolean isInternal) {
@@ -91,19 +104,29 @@ public abstract class ScopeModel implements ExtensionAccessor {
      * NOTE:
      * <ol>
      *  <li>The initialize method only be called in subclass.</li>
+     *  initialize 方法只能在 subclass（子类:FrameworkModel,ApplicationModel,ModuleModel）中调用,使用子类都要执行这个方法进行初始化
      * <li>
      * In subclass, the extensionDirector and beanFactory are available in initialize but not available in constructor.
+     * 在子类中，extensionDirector 和 beanFactory 在 initialize 中可用，但在 constructor 中不可用。
      * </li>
      * </ol>
      */
     protected void initialize() {
         synchronized (instLock) {
+            // 创建 ExtensionDirector（如果有parent，创建ExtensionDirector时给ExtensionDirector的parent赋值）
+            //初始化ExtensionDirector是一个作用域扩展加载程序管理器。
+            //ExtensionDirector支持多个级别，子级可以继承父级的扩展实例。
+            //查找和创建扩展实例的方法类似于Java classloader。
             this.extensionDirector =
                     new ExtensionDirector(parent != null ? parent.getExtensionDirector() : null, scope, this);
+            //这个参考了Spring的生命周期回调思想，添加一个扩展初始化的前后调用的处理器，在扩展初始化之前或之后调用的后处理器，参数类型为ExtensionPostProcessor
             this.extensionDirector.addExtensionPostProcessor(new ScopeModelAwareExtensionProcessor(this));
+            // 创建 BeanFactory（如果有parent，创建ScopeBeanFactory时给ScopeBeanFactory赋值）
+            // 一个内部共享的域工厂对象，用于注册Bean，创建Bean，获取Bean，初始化Bean等
             this.beanFactory = new ScopeBeanFactory(parent != null ? parent.getBeanFactory() : null, extensionDirector);
 
             // Add Framework's ClassLoader by default
+            //将当前类的加载器存入加载器集合classLoaders中
             ClassLoader dubboClassLoader = ScopeModel.class.getClassLoader();
             if (dubboClassLoader != null) {
                 this.addClassLoader(dubboClassLoader);
@@ -117,6 +140,7 @@ public abstract class ScopeModel implements ExtensionAccessor {
         Lock lock = acquireDestroyLock();
         try {
             lock.lock();
+            // aqs
             if (destroyed.compareAndSet(false, true)) {
                 try {
                     onDestroy();
@@ -246,8 +270,10 @@ public abstract class ScopeModel implements ExtensionAccessor {
 
     /**
      * Get current model's environment.
+     * 获取当前模型的环境
      * </br>
      * Note: This method should not start with `get` or it would be invoked due to Spring boot refresh.
+     * 此方法不应以 'get' 开头，否则会因 Spring 启动刷新而被调用。
      * @see <a href="https://github.com/apache/dubbo/issues/12542">Configuration refresh issue</a>
      */
     public abstract Environment modelEnvironment();

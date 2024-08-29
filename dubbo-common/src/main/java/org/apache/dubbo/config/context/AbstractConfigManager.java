@@ -111,12 +111,16 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
 
     @Override
     public void initialize() throws IllegalStateException {
+        //乐观锁判断是否初始化过, 如果已经初始化过则直接返回
         if (!initialized.compareAndSet(false, true)) {
             return;
         }
+        //获取组合配置对象
         CompositeConfiguration configuration = scopeModel.modelEnvironment().getConfiguration();
 
         // dubbo.config.mode
+        // 获取配置模式，配置模式对应枚举类型ConfigMode，目前有这么几个STRICT，OVERRIDE，OVERRIDE_ALL，OVERRIDE_IF_ABSENT，IGNORE，
+        // 这个配置决定了属性覆盖的顺序，当有同一个配置key多次出现时候，以最新配置为准，还是以最老的那个配置为准，还是配置重复则抛出异常，默认值为严格模式STRICT重复则抛出异常
         String configModeStr = (String) configuration.getProperty(ConfigKeys.DUBBO_CONFIG_MODE);
         try {
             if (StringUtils.hasText(configModeStr)) {
@@ -130,13 +134,14 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
         }
 
         // dubbo.config.ignore-duplicated-interface
+        // 忽略重复的接口（服务/引用）配置。默认值为false
         String ignoreDuplicatedInterfaceStr =
                 (String) configuration.getProperty(ConfigKeys.DUBBO_CONFIG_IGNORE_DUPLICATED_INTERFACE);
         if (ignoreDuplicatedInterfaceStr != null) {
             this.ignoreDuplicatedInterface = Boolean.parseBoolean(ignoreDuplicatedInterfaceStr);
         }
 
-        // print
+        // print 打印配置信息到控制台
         Map<String, Object> map = new LinkedHashMap<>();
         map.put(ConfigKeys.DUBBO_CONFIG_MODE, configMode);
         map.put(ConfigKeys.DUBBO_CONFIG_IGNORE_DUPLICATED_INTERFACE, this.ignoreDuplicatedInterface);
@@ -153,6 +158,9 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
             return null;
         }
         // ignore MethodConfig
+        //检查当前配置管理器支持管理的配置对象
+        //目前支持的配置有ApplicationConfig,MonitorConfig,MetricsConfig,SslConfig,
+        //ProtocolConfig,RegistryConfig,ConfigCenterConfig,MetadataReportConfig
         if (!isSupportConfigType(config.getClass())) {
             throw new IllegalArgumentException("Unsupported config type: " + config);
         }
@@ -161,10 +169,12 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
             config.setScopeModel(scopeModel);
         }
 
+        //缓存中是否存在
         Map<String, AbstractConfig> configsMap =
                 configsCache.computeIfAbsent(getTagName(config.getClass()), type -> new ConcurrentHashMap<>());
 
         // fast check duplicated equivalent config before write lock
+        //不是服务级配置则直接从缓存中读取到配置之后直接返回
         if (!(config instanceof ReferenceConfigBase || config instanceof ServiceConfigBase)) {
             for (AbstractConfig value : configsMap.values()) {
                 if (value.equals(config)) {
@@ -174,6 +184,7 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
         }
 
         // lock by config type
+        //添加配置
         synchronized (configsMap) {
             return (T) addIfAbsent(config, configsMap);
         }
@@ -198,16 +209,19 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
      */
     private <C extends AbstractConfig> C addIfAbsent(C config, Map<String, C> configsMap) throws IllegalStateException {
 
+        //配置信息为空直接返回
         if (config == null || configsMap == null) {
             return config;
         }
 
         // find by value
+        //根据配置规则判断,配置存在则返回
         Optional<C> prevConfig = findDuplicatedConfig(configsMap, config);
         if (prevConfig.isPresent()) {
             return prevConfig.get();
         }
 
+        //生成配置key
         String key = config.getId();
         if (key == null) {
             do {
@@ -216,6 +230,7 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
             } while (configsMap.containsKey(key));
         }
 
+        //不相同的配置key重复则抛出异常
         C existedConfig = configsMap.get(key);
         if (existedConfig != null && !isEquals(existedConfig, config)) {
             String type = config.getClass().getSimpleName();
@@ -230,6 +245,7 @@ public abstract class AbstractConfigManager extends LifecycleAdapter {
         }
 
         // override existed config if any
+        //将配置对象存入configsMap对象中,configsMap来源于configsCache
         configsMap.put(key, config);
         return config;
     }

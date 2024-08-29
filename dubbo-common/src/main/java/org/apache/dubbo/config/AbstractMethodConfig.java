@@ -122,6 +122,7 @@ public abstract class AbstractMethodConfig extends AbstractConfig {
 
     @Override
     protected void checkScopeModel(ScopeModel scopeModel) {
+        //对于方法级别配置来说，合法的参数必须是ModuleModel类型或者子类型
         if (!(scopeModel instanceof ModuleModel)) {
             throw new IllegalArgumentException(
                     "Invalid scope model, expect to be a ModuleModel but got: " + scopeModel);

@@ -32,6 +32,9 @@ public interface ExtensionAccessor {
         return extensionLoader != null ? extensionLoader.getExtension(name) : null;
     }
 
+    /**
+     * 获取自适应扩展对象
+     */
     default <T> T getAdaptiveExtension(Class<T> type) {
         ExtensionLoader<T> extensionLoader = getExtensionLoader(type);
         return extensionLoader != null ? extensionLoader.getAdaptiveExtension() : null;

@@ -149,6 +149,7 @@ public interface Logger {
 
     /**
      * Is info logging currently enabled?
+     * 当前是否启用了信息日志记录？
      *
      * @return true if info is enabled
      */

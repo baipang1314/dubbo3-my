@@ -42,24 +42,42 @@ import java.util.concurrent.locks.Lock;
  * singleton or static (by itself totally static or uses some static fields). So the instances
  * returned from them are of process scope. If you want to support multiple dubbo servers in one
  * single process, you may need to refactor those three classes.
+ * ExtensionLoader、DubboBootstrap和这个类目前被设计为单例或静态的（本身完全静态或使用一些静态字段）。
+ * 因此，从它们返回的实例属于进程范围。
+ * 如果想在单个进程中支持多个 dubbo 服务器，可能需要重构这三个类。
  * <p>
  * Represent an application which is using Dubbo and store basic metadata info for using
  * during the processing of RPC invoking.
+ * 代表一个正在使用 Dubbo 的应用程序，并存储基本的元数据信息，以便在 RPC 调用过程中使用。(从角色上看，要么是提供者要么是消费者)
  * <p>
  * ApplicationModel includes many ProviderModel which is about published services
  * and many Consumer Model which is about subscribed services.
+ * ApplicationModel 包括许多 ProviderModel（与已发布的服务有关）和许多 Consumer Model（与订阅的服务有关）。
  * <p>
  */
 public class ApplicationModel extends ScopeModel {
+
     protected static final Logger LOGGER = LoggerFactory.getLogger(ApplicationModel.class);
     public static final String NAME = "ApplicationModel";
     private final List<ModuleModel> moduleModels = new CopyOnWriteArrayList<>();
     private final List<ModuleModel> pubModuleModels = new CopyOnWriteArrayList<>();
+    /**
+     * 环境信息
+     */
     private volatile Environment environment;
+    /**
+     * 配置管理实例对象
+     */
     private volatile ConfigManager configManager;
     private volatile ServiceRepository serviceRepository;
+    /**
+     * 应用程序部署器
+     */
     private volatile ApplicationDeployer deployer;
 
+    /**
+     * 所属框架实例
+     */
     private final FrameworkModel frameworkModel;
 
     private final ModuleModel internalModule;
@@ -83,11 +101,15 @@ public class ApplicationModel extends ScopeModel {
      * During destroying the default FrameworkModel, the FrameworkModel.defaultModel() or ApplicationModel.defaultModel()
      * will return a broken model, maybe cause unpredictable problem.
      * Recommendation: Avoid using the default model as much as possible.
+     * 在销毁默认的 FrameworkModel 时， FrameworkModel.defaultModel()或ApplicationModel.defaultModel()
+     * 将返回一个损坏的模型可能会导致不可预知的问题。
+     * 建议：尽量避免使用默认模型。
      *
      * @return the global default ApplicationModel
      */
     public static ApplicationModel defaultModel() {
         // should get from default FrameworkModel, avoid out of sync
+        // FrameworkModel.defaultModel()可能返回空
         return FrameworkModel.defaultModel().defaultApplication();
     }
 
@@ -98,32 +120,44 @@ public class ApplicationModel extends ScopeModel {
     }
 
     protected ApplicationModel(FrameworkModel frameworkModel, boolean isInternal) {
+        // 创建ApplicationModel需要传入所属的FrameworkModel和是否是内部isInternal，isInternal如果不传，则默认为false
         super(frameworkModel, ExtensionScope.APPLICATION, isInternal);
+        // 父类ScopeModel的锁（一个属性Object）
         synchronized (instLock) {
+            // 多线程环境下，如果是通过DefaultModel获取的FrameworkModel，可能会返回已经损毁的FrameworkModel，可能是个null
             Assert.notNull(frameworkModel, "FrameworkModel can not be null");
+            //应用程序域成员变量记录frameworkModel对象
             this.frameworkModel = frameworkModel;
+            //frameworkModel对象添加当前应用程序域对象
             frameworkModel.addApplication(this);
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info(getDesc() + " is created");
             }
+            // 调用父类公用的初始化方法
             initialize();
 
+            // ApplicationModel初始化时会创建一个内部的modelModel(上层模型初始化都会创建一个内部的下一层模型，FrameworkModel会创建一个内部的ApplicationModel)
+            // TODO 这个内部的下层模型的作用是什么？Framework中的ApplicationModel用来获取应用配置管理器并且设置了一些记录着常见的应用配置信息
             this.internalModule = new ModuleModel(this, true);
+            //创建一个独立服务存储对象
             this.serviceRepository = new ServiceRepository(this);
 
+            //获取应用程序初始化监听器ApplicationInitListener扩展（当前版本ApplicationInitListener暂时还没有实现类）
             ExtensionLoader<ApplicationInitListener> extensionLoader =
                     this.getExtensionLoader(ApplicationInitListener.class);
             Set<String> listenerNames = extensionLoader.getSupportedExtensions();
             for (String listenerName : listenerNames) {
                 extensionLoader.getExtension(listenerName).init();
             }
-
+            //初始化扩展(这个是应用程序生命周期的方法调用，这里调用初始化方法
             initApplicationExts();
 
+            //获取域模型初始化器扩展对象列表，然后执行初始化方法
             ExtensionLoader<ScopeModelInitializer> initializerExtensionLoader =
                     this.getExtensionLoader(ScopeModelInitializer.class);
             Set<ScopeModelInitializer> initializers = initializerExtensionLoader.getSupportedExtensionInstances();
             for (ScopeModelInitializer initializer : initializers) {
+                //FrameworkModel执行initializeFrameworkModel
                 initializer.initializeApplicationModel(this);
             }
 
@@ -138,6 +172,7 @@ public class ApplicationModel extends ScopeModel {
     private void initApplicationExts() {
         Set<ApplicationExt> exts = this.getExtensionLoader(ApplicationExt.class).getSupportedExtensionInstances();
         for (ApplicationExt ext : exts) {
+            // ModuleExt从父类Lifecycle继承了initialize方法
             ext.initialize();
         }
     }
@@ -246,6 +281,9 @@ public class ApplicationModel extends ScopeModel {
         return appCfgOptional.isPresent() ? appCfgOptional.get().getName() : null;
     }
 
+    /**
+     * 和frameworkModel.addApplication()方法类似
+     */
     void addModule(ModuleModel moduleModel, boolean isInternal) {
         synchronized (instLock) {
             if (!this.moduleModels.contains(moduleModel)) {

@@ -21,8 +21,14 @@ import org.apache.dubbo.common.utils.StringUtils;
 
 import java.util.Map;
 
+/**
+ * 在旧版本实现中，不同的 URL 中属性相同的字符串会存储在堆内不同的地址中，如 protocol、path 等，
+ * 当有大量 provider 的情况下，Consumer 端的堆内会存在大量的重复字符串，导致内存利用率低下，所以此处提供了另一个优化方式，即字符串重用。
+ *
+ */
 public class URLItemCache {
     // thread safe with limited size, by default 1000
+    // 字符串重用即为简单地使用了 Map 来存储对应的缓存值
     private static final Map<String, String> PARAM_KEY_CACHE = new LRUCache<>(10000);
     private static final Map<String, String> PARAM_VALUE_CACHE = new LRUCache<>(50000);
     private static final Map<String, String> PATH_CACHE = new LRUCache<>(10000);

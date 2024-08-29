@@ -86,20 +86,20 @@ public class ExtensionDirector implements ExtensionAccessor {
             scope = annotation.scope();
             extensionScopeMap.put(type, scope);
         }
-
+        // 如果本地缓存没有找到extensionLoader，但是在extensionScope缓存里面找到一个范围是自己的scope，则创建一个扩展点加载器
         if (loader == null && scope == ExtensionScope.SELF) {
             // create an instance in self scope
             loader = createExtensionLoader0(type);
         }
 
-        // 2. find in parent
+        // 2. find in parent没找到，但是parent里面找到了，则直接使用parent的getExtensionLoader方法获取
         if (loader == null) {
             if (this.parent != null) {
                 loader = this.parent.getExtensionLoader(type);
             }
         }
 
-        // 3. create it
+        // 3. create it  缓存没有，scope没有或者范围不是自己，parent也没有，纯孤儿，创建一个
         if (loader == null) {
             loader = createExtensionLoader(type);
         }
@@ -109,6 +109,7 @@ public class ExtensionDirector implements ExtensionAccessor {
 
     private <T> ExtensionLoader<T> createExtensionLoader(Class<T> type) {
         ExtensionLoader<T> loader = null;
+        // 范围要和spi注解范围一致，否则最后返回的loader是空的
         if (isScopeMatched(type)) {
             // if scope is matched, just create it
             loader = createExtensionLoader0(type);

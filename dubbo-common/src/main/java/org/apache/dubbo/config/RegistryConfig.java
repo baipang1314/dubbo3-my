@@ -238,21 +238,28 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setAddress(String address) {
+        //保存地址
         this.address = address;
+        //下面是支持将参数在url地址后面 比如用户名,密码,协议,端口,这几个参数提前做解析放入成员变量中
         if (address != null) {
             try {
+                //地址转Dubbo的URL对象 这个URL是Dubbo自行实现的URL封装信息的类型
                 URL url = URL.valueOf(address);
 
                 // Refactor since 2.7.8
+                //值不存在时候更新属性,非常巧妙的代码 重构了多个if判断
+                //第一个参数值不存在则调用第二个方法,第二个方法的参数为第三方参数值
                 updatePropertyIfAbsent(this::getUsername, this::setUsername, url.getUsername());
                 updatePropertyIfAbsent(this::getPassword, this::setPassword, url.getPassword());
                 updatePropertyIfAbsent(this::getProtocol, this::setProtocol, url.getProtocol());
                 updatePropertyIfAbsent(this::getPort, this::setPort, url.getPort());
 
+                //移除掉url中的backup自定义参数 (备份的注册中心地址)
                 Map<String, String> params = url.getParameters();
                 if (CollectionUtils.isNotEmptyMap(params)) {
                     params.remove(BACKUP_KEY);
                 }
+                //将自定义参数存储到成员变量中
                 updateParameters(params);
             } catch (Exception ignored) {
             }

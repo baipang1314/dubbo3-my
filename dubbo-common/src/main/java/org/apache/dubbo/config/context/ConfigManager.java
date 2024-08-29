@@ -48,6 +48,8 @@ import static org.apache.dubbo.config.AbstractConfig.getTagName;
 /**
  * A lock-free config manager (through ConcurrentHashMap), for fast read operation.
  * The Write operation lock with sub configs map of config type, for safely check and add new config.
+ * 一个无锁的配置管理器（通过 ConcurrentHashMap），用于快速读取操作。
+ * 写入操作锁带有配置类型的子配置映射，用于安全检查和添加新配置。
  */
 public class ConfigManager extends AbstractConfigManager implements ApplicationExt {
 

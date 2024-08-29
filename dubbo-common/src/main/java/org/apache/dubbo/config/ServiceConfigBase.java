@@ -82,11 +82,15 @@ public abstract class ServiceConfigBase<T> extends AbstractServiceConfig {
     protected volatile String generic;
 
     public ServiceConfigBase() {
+        //服务元数据对象创建
         serviceMetadata = new ServiceMetadata();
+        //为服务元数据对象
         serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
     }
 
     public ServiceConfigBase(ModuleModel moduleModel) {
+        // 这个super会一路追到AbstractConfig
+        // ServiceConfigBase->AbstractServiceConfig->AbstractInterfaceConfig->AbstractMethodConfig->AbstractConfig
         super(moduleModel);
         serviceMetadata = new ServiceMetadata();
         serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
@@ -110,6 +114,7 @@ public abstract class ServiceConfigBase<T> extends AbstractServiceConfig {
     @Override
     protected void postProcessAfterScopeModelChanged(ScopeModel oldScopeModel, ScopeModel newScopeModel) {
         super.postProcessAfterScopeModelChanged(oldScopeModel, newScopeModel);
+        //当服务提供者配置对象不为空时候为服务提供者对象设置域模型,这里服务提供者对象仍旧为空,这个一般用在兼容Dubbo低版本
         if (this.provider != null && this.provider.getScopeModel() != getScopeModel()) {
             this.provider.setScopeModel(getScopeModel());
         }

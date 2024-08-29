@@ -63,6 +63,7 @@ public class ModuleConfigManager extends AbstractConfigManager implements Module
     private final ConfigManager applicationConfigManager;
 
     public ModuleConfigManager(ModuleModel moduleModel) {
+        //向抽象的配置管理器AbstractConfigManager传递参数
         super(
                 moduleModel,
                 Arrays.asList(
@@ -71,6 +72,7 @@ public class ModuleConfigManager extends AbstractConfigManager implements Module
                         ReferenceConfigBase.class,
                         ProviderConfig.class,
                         ConsumerConfig.class));
+        // 获取application级别的配置管理器，类型是ConfigManager
         applicationConfigManager = moduleModel.getApplicationModel().getApplicationConfigManager();
     }
 

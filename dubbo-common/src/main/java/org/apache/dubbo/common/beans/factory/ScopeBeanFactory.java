@@ -43,6 +43,7 @@ import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_FAILE
 
 /**
  * A bean factory for internal sharing.
+ * 一个内部共享的Bean工厂
  */
 public class ScopeBeanFactory {
 

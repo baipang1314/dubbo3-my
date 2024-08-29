@@ -430,7 +430,9 @@ public final class DubboBootstrap {
      * @return current {@link DubboBootstrap} instance
      */
     public DubboBootstrap application(ApplicationConfig applicationConfig) {
+        //将启动器构造器中初始化的默认应用程序模型对象传递给配置对象
         applicationConfig.setScopeModel(applicationModel);
+        //将配置信息添加到配置管理器中
         configManager.setApplication(applicationConfig);
         return this;
     }
@@ -467,7 +469,9 @@ public final class DubboBootstrap {
      * @return current {@link DubboBootstrap} instance
      */
     public DubboBootstrap registry(RegistryConfig registryConfig) {
+        //将applicationModel对象设置给注册中心配置对象
         registryConfig.setScopeModel(applicationModel);
+        //将注册中心配置对象添加到配置管理器中
         configManager.addRegistry(registryConfig);
         return this;
     }

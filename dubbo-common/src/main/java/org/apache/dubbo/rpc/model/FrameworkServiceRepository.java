@@ -33,6 +33,7 @@ import static org.apache.dubbo.common.BaseServiceMetadata.versionFromServiceKey;
 
 /**
  * Service repository for framework
+ * 框架的服务存储库
  */
 public class FrameworkServiceRepository {
 

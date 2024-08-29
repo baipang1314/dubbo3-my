@@ -85,10 +85,12 @@ public class ScopeModelUtil {
         if (scopeModel == null) {
             return FrameworkModel.defaultModel();
         }
+        //通过成员变量获取(构造器初始化的时候将FrameworkModel赋值给了ApplicationModel的成员变量
         if (scopeModel instanceof ApplicationModel) {
             return ((ApplicationModel) scopeModel).getFrameworkModel();
         } else if (scopeModel instanceof ModuleModel) {
             ModuleModel moduleModel = (ModuleModel) scopeModel;
+            //间接通过ApplicationModel获取，不越级获取
             return moduleModel.getApplicationModel().getFrameworkModel();
         } else if (scopeModel instanceof FrameworkModel) {
             return (FrameworkModel) scopeModel;

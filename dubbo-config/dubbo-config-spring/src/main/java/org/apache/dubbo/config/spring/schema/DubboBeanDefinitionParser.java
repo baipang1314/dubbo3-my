@@ -72,6 +72,7 @@ import static org.apache.dubbo.config.spring.util.SpringCompatUtils.getPropertyV
 
 /**
  * AbstractBeanDefinitionParser
+ * 所有 dubbo 的标签，都统一用 DubboBeanDefinitionParser 进行解析，基于一对一属性映射，将 XML 标签解析为 Bean 对象。
  *
  * @export
  */
